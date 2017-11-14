@@ -23,8 +23,8 @@ function initialize () {
    * Initial window options
    */
   window = new BrowserWindow({
-    width: 200,
-    height: 200,
+    width: 160,
+    height: 160,
     show: false,
     resizable: false,
     movable: false,
@@ -82,6 +82,11 @@ function initialize () {
     .subscribe(function () {
       tray.popUpContextMenu(menu);
     });
+
+  Rx.Observable.fromEvent(window, 'blur')
+    .subscribe(function () {
+      window.hide();
+    })
 }
 
 Rx.Observable.fromEvent(app, 'ready')

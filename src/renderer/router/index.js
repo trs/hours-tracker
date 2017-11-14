@@ -1,7 +1,7 @@
 import Vue from 'vue';
 import Router from 'vue-router';
 
-import IdlePage from '@/components/IdlePage'
+import IdlePage from '@/components/IdlePage';
 
 Vue.use(Router);
 
