@@ -1,7 +1,7 @@
 <template>
   <div id="page-idle">
     <div id="timer-container">
-      <h2>00:00:00</h2>
+      <h2>{{ timer }}</h2>
     </div>
 
     <div id="action-container">
@@ -26,8 +26,18 @@
     components: {
       ButtonElement,
       CalendarIcon
+    },
+    data: function () {
+      return {
+        timer: '00:00:00'
+      };
+    },
+    created: function () {
+      this.$electron.ipcRenderer.on('main:timer:set', (event, time) => {
+        this.timer = time;
+      });
     }
-  }
+  };
 </script>
 
 <style scoped>

@@ -3,31 +3,32 @@
     id="element-button"
     v-bind:class="{ active: running }"
     v-on:click="toggleTimer">
-    <x-icon v-show="running === true"></x-icon>
+    <pause-icon v-show="running === true"></pause-icon>
     <play-icon v-show="running === false"></play-icon>
   </button>
 </template>
 
 <script>
-  import { PlayIcon, XIcon } from 'vue-feather-icons';
+  import { PlayIcon, PauseIcon } from 'vue-feather-icons';
 
   export default {
     name: 'button-element',
     components: {
-      XIcon,
+      PauseIcon,
       PlayIcon
     },
     data: function () {
       return {
         running: false
-      }
+      };
     },
     methods: {
       toggleTimer: function () {
         this.running = !this.running;
+        this.$electron.ipcRenderer.send(`renderer:timer:${this.running ? 'start' : 'stop'}`);
       }
     }
-  }
+  };
 </script>
 
 <style scoped>
@@ -42,15 +43,52 @@
   background: none;
   border: 0;
   box-sizing: border-box;
-  box-shadow: inset 0 0 0 2px #f45e61;
   color: #f45e61;
   font-size: inherit;
   vertical-align: middle;
   position: relative;
   cursor: pointer;
   border-radius: 100%;
+
+  transition: all 250ms;
 }
-#element-button::before, #element-button::after {
+#element-button.active {
+  color: #0eb7da;
+}
+
+#element-button:hover {
+  color: #0eb7da;
+}
+#element-button.active:hover {
+   color: #f45e61;
+}
+
+#element-button svg {
+  width: 2.6em;
+  height: 2.6em;
+  stroke-width: 0px;
+  transition: all 250ms;
+}
+#element-button svg.feather-play {
+  margin-left: 1px;
+}
+
+#element-button svg {
+  fill: #f45e61;
+}
+#element-button:hover svg {
+  fill: #0eb7da;
+}
+
+#element-button.active svg {
+  fill: #0eb7da;
+}
+#element-button.active:hover svg {
+   fill: #f45e61;
+}
+
+
+/* #element-button::before, #element-button::after {
   box-sizing: inherit;
   content: '';
   position: absolute;
@@ -99,15 +137,8 @@
 }
 #element-button.active:hover::after {
   border-top: 2px solid #f45e61;
-}
+} */
 
-.active {
-  box-shadow: inset 0 0 0 2px #0eb7da !important;
-  color: #0eb7da !important;
-}
 
-svg.feather-play {
-  /* border: 1px solid purple; */
-  margin-left: 1px;
-}
+
 </style>

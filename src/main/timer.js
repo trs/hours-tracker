@@ -67,6 +67,7 @@ function formatMs (milliseconds, includeSeconds = true) {
   return `${hours}:${minutes}${includeSeconds ? `:${seconds}` : ''}`;
 }
 
+<<<<<<< HEAD
 export {
   loadToday,
   saveToday,
@@ -74,4 +75,23 @@ export {
   stopTimer,
   getCurrentTime,
   formatMs
+=======
+function getCurrentTime () {
+  const now = new Date().valueOf();
+
+  return timers.reduce((total, time) => {
+    if (time.end) {
+      return total + (time.end - time.start);
+    } else {
+      return total + (now - time.start);
+    }
+  }, 0);
+}
+
+export {
+  startTimer,
+  stopTimer,
+  format,
+  getCurrentTime
+>>>>>>> eff7fcb... WIP: timer logic
 };

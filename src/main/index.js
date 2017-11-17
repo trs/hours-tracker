@@ -1,8 +1,14 @@
 'use strict';
 
-import { app, BrowserWindow, Menu, Tray, nativeImage } from 'electron';
+/* eslint no-duplicate-imports: "off" */
+/* eslint import/no-duplicates: "off" */
+
+import * as electron from 'electron';
+import { app, BrowserWindow, Menu, Tray, nativeImage, ipcMain } from 'electron';
 import * as Rx from 'rxjs';
 import * as path from 'path';
+
+import * as timer from './timer';
 
 /**
  * Set `__static` path to static files in production
@@ -13,10 +19,19 @@ if (process.env.NODE_ENV !== 'development') {
 }
 
 let window;
-let tray;
 const winURL = process.env.NODE_ENV === 'development'
   ? `http://localhost:9080`
   : `file://${__dirname}/index.html`;
+
+function getCurrentDisplay () {
+  const cursorPoint = electron.screen.getCursorScreenPoint();
+  return electron.screen.getDisplayNearestPoint(cursorPoint);
+}
+
+function isBoundInScreen (display, bounds) {
+  const boundDisplay = electron.screen.getDisplayMatching(bounds);
+  return display.id === boundDisplay.id;
+}
 
 function initialize () {
   /**
@@ -45,7 +60,7 @@ function initialize () {
   const icon = nativeImage.createFromPath(iconURL);
   icon.setTemplateImage(true);
 
-  tray = new Tray(icon);
+  const tray = new Tray(icon);
   // tray.setTitle('Hours');
 
   const menu = Menu.buildFromTemplate([
@@ -59,21 +74,52 @@ function initialize () {
     }
   ]);
 
+  function updateCurrentTimeTitle() {
+    const time = timer.getCurrentTime();
+    const formattedTime = timer.formatMs(time);
+
+    tray.setTitle(formattedTime);
+  }
+
+  updateCurrentTimeTitle();
+
+  Rx.Observable.fromEvent(ipcMain, 'renderer:timer:start')
+    .do(() => timer.startTimer())
+    .mergeMap(event => {
+      return Rx.Observable.timer(0, 1000)
+        .takeUntil(Rx.Observable.fromEvent(ipcMain, 'renderer:timer:stop'))
+        .map(() => event);
+    })
+    .do(() => timer.updateCurrentTimeTitle)
+    .subscribe(formattedTime => {
+      updateCurrentTimeTitle();
+
+      window.webContents.send('main:timer:set', formattedTime);
+    });
+
+  Rx.Observable.fromEvent(ipcMain, 'renderer:timer:stop')
+    .subscribe(function () {
+      timer.stopTimer();
+    });
+
   Rx.Observable.fromEvent(tray, 'click')
     .skipUntil(Rx.Observable.fromEvent(window, 'ready-to-show'))
     .subscribe(function () {
-      if (window.isVisible() && window.isFocused()) {
+      const windowBounds = window.getBounds();
+      const display = getCurrentDisplay();
+      const sameDisplay = isBoundInScreen(display, windowBounds);
+
+      if (sameDisplay && window.isVisible() && window.isFocused()) {
         window.hide();
       } else {
         const trayBounds = tray.getBounds();
-        const windowBounds = window.getBounds();
 
         const windowX = Math.max(0,
           trayBounds.x - Math.floor(windowBounds.width / 2) + Math.floor(trayBounds.width / 2));
-        const windowY = trayBounds.y;
+        const windowY = display.workArea.y;
 
-        window.setPosition(windowX, windowY);
         window.hide();
+        window.setPosition(windowX, windowY);
         window.show();
       }
     });
@@ -86,11 +132,17 @@ function initialize () {
   Rx.Observable.fromEvent(window, 'blur')
     .subscribe(function () {
       window.hide();
-    })
+    });
 }
 
 Rx.Observable.fromEvent(app, 'ready')
-  .subscribe(initialize);
+  .mergeMap(() => timer.loadToday())
+  .subscribe(() => initialize());
+
+Rx.Observable.fromEvent(app, 'quit')
+  .do(() => timer.stopTimer())
+  .mergeMap(() => timer.saveToday())
+  .subscribe();
 
 // app.on('window-all-closed', () => {
 //   if (process.platform !== 'darwin') {
