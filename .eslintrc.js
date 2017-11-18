@@ -16,6 +16,7 @@ module.exports = {
     'html'
   ],
   'rules': {
+    'space-before-function-paren': 0,
     'semi': ['warn', 'always'],
     // allow paren-less arrow functions
     'arrow-parens': 0,
